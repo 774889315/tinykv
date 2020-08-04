@@ -2,11 +2,13 @@ package server
 
 import (
 	"context"
-
+	"github.com/Connor1996/badger"
 	"github.com/pingcap-incubator/tinykv/kv/coprocessor"
 	"github.com/pingcap-incubator/tinykv/kv/storage"
 	"github.com/pingcap-incubator/tinykv/kv/storage/raft_storage"
+	"github.com/pingcap-incubator/tinykv/kv/storage/standalone_storage"
 	"github.com/pingcap-incubator/tinykv/kv/transaction/latches"
+	"github.com/pingcap-incubator/tinykv/kv/util/engine_util"
 	coppb "github.com/pingcap-incubator/tinykv/proto/pkg/coprocessor"
 	"github.com/pingcap-incubator/tinykv/proto/pkg/kvrpcpb"
 	"github.com/pingcap-incubator/tinykv/proto/pkg/tinykvpb"
@@ -38,22 +40,38 @@ func NewServer(storage storage.Storage) *Server {
 // Raw API.
 func (server *Server) RawGet(_ context.Context, req *kvrpcpb.RawGetRequest) (*kvrpcpb.RawGetResponse, error) {
 	// Your Code Here (1).
-	return nil, nil
+	val, err := engine_util.GetCFFromTxn(standalone_storage.Txn, req.Cf, req.Key)
+	return &kvrpcpb.RawGetResponse {
+		Value: val, NotFound: err == badger.ErrKeyNotFound,
+	}, nil
 }
 
 func (server *Server) RawPut(_ context.Context, req *kvrpcpb.RawPutRequest) (*kvrpcpb.RawPutResponse, error) {
 	// Your Code Here (1).
-	return nil, nil
+	err := standalone_storage.Txn.Set(engine_util.KeyWithCF(req.Cf, req.Key), req.Value)
+	return nil, err
 }
 
 func (server *Server) RawDelete(_ context.Context, req *kvrpcpb.RawDeleteRequest) (*kvrpcpb.RawDeleteResponse, error) {
 	// Your Code Here (1).
-	return nil, nil
+	err := standalone_storage.Txn.Delete(engine_util.KeyWithCF(req.Cf, req.Key))
+	return nil, err
 }
 
 func (server *Server) RawScan(_ context.Context, req *kvrpcpb.RawScanRequest) (*kvrpcpb.RawScanResponse, error) {
 	// Your Code Here (1).
-	return nil, nil
+	iter := standalone_storage.Txn.NewIterator(badger.IteratorOptions{})
+	iter.Seek(req.StartKey)
+	var kvs []*kvrpcpb.KvPair
+	for i := uint32(0); i < req.Limit && iter.Valid(); i++ {
+		item := iter.Item()
+		val, _ := item.ValueCopy(nil)
+		kvs = append(kvs, &kvrpcpb.KvPair {Key: item.KeyCopy(nil), Value: val})
+		iter.Next()
+	}
+	return &kvrpcpb.RawScanResponse {
+		Kvs: kvs,
+	}, nil
 }
 
 // Raft commands (tinykv <-> tinykv)

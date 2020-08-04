@@ -1,3 +1,17 @@
+# 开发日志
+
+**7月31日 第1周周五**
+
+项目开始。搭建环境，学习Go语言语法。
+
+**8月4日 第2周周二**
+
+完成Project1的大部分内容，完成了除RawScan之外的其它测试点。RawScan上碰到困难，主要是迭代器获取的key实际上为cf_key。之后将与同学讨论，借鉴他人思路，解决这个问题。
+
+
+---
+
+
 # The TinyKV Course
 
 This is a series of projects on a key-value storage system built with the Raft consensus algorithm. These projects are inspired by the famous [MIT 6.824](http://nil.csail.mit.edu/6.824/2018/index.html) course, but aim to be closer to industry implementations. The whole course is pruned from [TiKV](https://github.com/tikv/tikv) and re-written in Go. After completing this course, you will have the knowledge to implement a horizontal scalable, high available, key-value storage service with distributed transaction support and a better understanding of TiKV implementation.
