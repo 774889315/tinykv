@@ -2,13 +2,10 @@ package server
 
 import (
 	"context"
-	"github.com/Connor1996/badger"
 	"github.com/pingcap-incubator/tinykv/kv/coprocessor"
 	"github.com/pingcap-incubator/tinykv/kv/storage"
 	"github.com/pingcap-incubator/tinykv/kv/storage/raft_storage"
-	"github.com/pingcap-incubator/tinykv/kv/storage/standalone_storage"
 	"github.com/pingcap-incubator/tinykv/kv/transaction/latches"
-	"github.com/pingcap-incubator/tinykv/kv/util/engine_util"
 	coppb "github.com/pingcap-incubator/tinykv/proto/pkg/coprocessor"
 	"github.com/pingcap-incubator/tinykv/proto/pkg/kvrpcpb"
 	"github.com/pingcap-incubator/tinykv/proto/pkg/tinykvpb"
@@ -40,27 +37,42 @@ func NewServer(storage storage.Storage) *Server {
 // Raw API.
 func (server *Server) RawGet(_ context.Context, req *kvrpcpb.RawGetRequest) (*kvrpcpb.RawGetResponse, error) {
 	// Your Code Here (1).
-	val, err := engine_util.GetCFFromTxn(standalone_storage.Txn, req.Cf, req.Key)
+	reader, _ := server.storage.Reader(req.Context)
+	val, _ := reader.GetCF(req.Cf, req.Key)
 	return &kvrpcpb.RawGetResponse {
-		Value: val, NotFound: err == badger.ErrKeyNotFound,
+		Value: val, NotFound: val == nil,
 	}, nil
 }
 
 func (server *Server) RawPut(_ context.Context, req *kvrpcpb.RawPutRequest) (*kvrpcpb.RawPutResponse, error) {
 	// Your Code Here (1).
-	err := standalone_storage.Txn.Set(engine_util.KeyWithCF(req.Cf, req.Key), req.Value)
-	return nil, err
+	return nil, server.storage.Write(req.Context, []storage.Modify {
+		{
+			storage.Put{
+				Cf: req.Cf,
+				Key: req.Key,
+				Value: req.Value,
+			},
+		},
+	})
 }
 
 func (server *Server) RawDelete(_ context.Context, req *kvrpcpb.RawDeleteRequest) (*kvrpcpb.RawDeleteResponse, error) {
 	// Your Code Here (1).
-	err := standalone_storage.Txn.Delete(engine_util.KeyWithCF(req.Cf, req.Key))
-	return nil, err
+	return nil, server.storage.Write(req.Context, []storage.Modify {
+		{
+			storage.Delete{
+				Cf: req.Cf,
+				Key: req.Key,
+			},
+		},
+	})
 }
 
 func (server *Server) RawScan(_ context.Context, req *kvrpcpb.RawScanRequest) (*kvrpcpb.RawScanResponse, error) {
 	// Your Code Here (1).
-	iter := standalone_storage.Txn.NewIterator(badger.IteratorOptions{})
+	reader, _ := server.storage.Reader(req.Context)
+	iter := reader.IterCF(req.Cf)
 	iter.Seek(req.StartKey)
 	var kvs []*kvrpcpb.KvPair
 	for i := uint32(0); i < req.Limit && iter.Valid(); i++ {

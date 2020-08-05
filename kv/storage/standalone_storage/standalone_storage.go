@@ -12,16 +12,18 @@ import (
 // communicate with other nodes and all data is stored locally.
 type StandAloneStorage struct {
 	// Your Data Here (1).
+	engine *badger.DB
+	txn *badger.Txn
 }
-
-var Engine *badger.DB
-var Txn *badger.Txn
 
 func NewStandAloneStorage(conf *config.Config) *StandAloneStorage {
 	// Your Code Here (1).
-	Engine = engine_util.CreateDB("test", conf)
-	Txn = Engine.NewTransaction(true)
-	return nil
+	engine := engine_util.CreateDB("test", conf)
+	txn := engine.NewTransaction(true)
+	return &StandAloneStorage{
+		engine: engine,
+		txn: txn,
+	}
 }
 
 func (s *StandAloneStorage) Start() error {
@@ -31,8 +33,7 @@ func (s *StandAloneStorage) Start() error {
 
 func (s *StandAloneStorage) Stop() error {
 	// Your Code Here (1).
-	Engine.Close()
-	return nil
+	return s.engine.Close()
 }
 
 func (s *StandAloneStorage) Reader(ctx *kvrpcpb.Context) (storage.StorageReader, error) {
@@ -42,17 +43,23 @@ func (s *StandAloneStorage) Reader(ctx *kvrpcpb.Context) (storage.StorageReader,
 
 func (s *StandAloneStorage) Write(ctx *kvrpcpb.Context, batch []storage.Modify) error {
 	// Your Code Here (1).
-	Txn.Set(engine_util.KeyWithCF(batch[0].Cf(), batch[0].Key()), batch[0].Value())
-	return nil
+	switch batch[0].Data.(type) {
+	case storage.Put:
+		return s.txn.Set(engine_util.KeyWithCF(batch[0].Cf(), batch[0].Key()), batch[0].Value())
+	case storage.Delete:
+		return s.txn.Delete(engine_util.KeyWithCF(batch[0].Cf(), batch[0].Key()))
+	default:
+		return nil
+	}
 }
 
 func (s *StandAloneStorage) GetCF(cf string, key []byte) ([]byte, error) {
-	val, _ := engine_util.GetCFFromTxn(Txn, cf, key)
+	val, _ := engine_util.GetCFFromTxn(s.txn, cf, key)
 	return val, nil
 }
 
 func (s *StandAloneStorage) IterCF(cf string) engine_util.DBIterator {
-	panic("implement me")
+	return engine_util.NewCFIterator(cf, s.txn)
 }
 
 func (s *StandAloneStorage) Close() {
