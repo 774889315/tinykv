@@ -22,6 +22,14 @@ server中不该直接调用底层txn，而应该调用standalone_storage中的�
 
 完成了Project1的所有测试点，约耗时8秒
 
+**8月7日 第2周周五**
+
+完成Project2aa的所有测试点，耗时在毫秒级
+
+修正了Term从1开始的bug，改变了对实现思路的错误理解
+
+若不考虑异常处理，Step函数改为switch m.MsgType更为简明
+
 
 ---
 
