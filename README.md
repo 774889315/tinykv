@@ -14,7 +14,7 @@ RawScan上碰到困难，迭代器获取的key是cf_key而实际上不需要cf�
 
 **8月5日 第2周周三**
 
-参看学长代码，进一步理解了思路
+参看资料，进一步理解了思路
 
 server中不该直接调用底层txn，而应该调用standalone_storage中的方法
 
@@ -29,6 +29,16 @@ server中不该直接调用底层txn，而应该调用standalone_storage中的�
 修正了Term从1开始的bug，改变了对实现思路的错误理解
 
 若不考虑异常处理，Step函数改为switch m.MsgType更为简明
+
+**8月10日 第3周周一**
+
+继续做Project2ab，完成了部分测试点
+
+对MsgAppendResponse的统计，采用按match排序后取下中位数的方法
+
+noop也需广播出去，之前忽略了这一点
+
+修正了若干因理解而引起的错误
 
 
 ---
