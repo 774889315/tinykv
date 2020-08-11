@@ -61,7 +61,7 @@ func newLog(storage Storage) *RaftLog {
 	ents, _ := storage.Entries(fi, li + 1)
 	log := &RaftLog {
 		storage: storage,
-		committed: li,
+		committed: 0,
 		stabled: li,
 		entries: ents,
 	}
