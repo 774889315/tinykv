@@ -201,9 +201,6 @@ func (r *Raft) sendAppend(to uint64) bool {
 	for i := r.Prs[to].Match; i < uint64(len(r.RaftLog.entries)); i++ {
 		ents = append(ents, &r.RaftLog.entries[i])
 	}
-	if len(ents) == 0 {
-		return false
-	}
 	logTerm, _ := r.RaftLog.Term(r.Prs[to].Match)
 	msg := pb.Message {
 		MsgType: pb.MessageType_MsgAppend,
@@ -228,11 +225,7 @@ func (r *Raft) sendHeartbeat(to uint64) {
 		From: r.id,
 		Term: r.Term,
 	}
-	if to == r.id {
-		r.Step(msg)
-	} else {
-		r.msgs = append(r.msgs, msg)
-	}
+	r.msgs = append(r.msgs, msg)
 }
 
 func (r *Raft) sendRequestVote(to uint64) {
@@ -367,7 +360,9 @@ func (r *Raft) Step(m pb.Message) error {
 			return nil
 		}
 		for i, _ := range r.Prs {
-			r.sendHeartbeat(i)
+			if i != r.id {
+				r.sendHeartbeat(i)
+			}
 		}
 	case pb.MessageType_MsgPropose:
 		if r.State != StateLeader {
@@ -398,6 +393,7 @@ func (r *Raft) Step(m pb.Message) error {
 		}
 		resort := r.Prs[m.From].Match <= r.RaftLog.committed && m.Index > r.RaftLog.committed
 		r.Prs[m.From].Match = m.Index
+		r.Prs[m.From].Next = m.Index + 1
 		if resort {
 			match := make(uint64Slice, len(r.Prs))
 			j := 0
@@ -409,6 +405,9 @@ func (r *Raft) Step(m pb.Message) error {
 			mid := match[(len(r.Prs) - 1) / 2]
 			if term, _ := r.RaftLog.Term(mid); term == r.Term {
 				r.RaftLog.committed = mid
+				r.Step(pb.Message{
+					MsgType: pb.MessageType_MsgPropose,
+				})
 			}
 		}
 	case pb.MessageType_MsgRequestVote:
@@ -419,7 +418,9 @@ func (r *Raft) Step(m pb.Message) error {
 			return nil
 		}
 		if r.State == StateLeader {
-			r.State = StateFollower
+			r.becomeFollower(r.Term, None)
+		} else {
+			r.Lead = 0
 		}
 		switch r.Vote {
 		case None:
@@ -445,6 +446,8 @@ func (r *Raft) handleAppendEntries(m pb.Message) {
 	// Your Code Here (2A).
 	if r.Term <= m.Term {
 		r.becomeFollower(m.Term, m.From)
+	} else {
+		return
 	}
 	if logTerm, _ := r.RaftLog.Term(m.Index); logTerm != m.LogTerm {
 		r.msgs = append(r.msgs, pb.Message {
@@ -467,12 +470,14 @@ func (r *Raft) handleAppendEntries(m pb.Message) {
 		}
 		r.RaftLog.entries = append(r.RaftLog.entries, *m.Entries[i])
 	}
-	r.RaftLog.committed = m.Commit
+	lastIndex := m.Index + uint64(len(m.Entries))
+	r.RaftLog.committed = min(m.Commit, lastIndex)
 	r.msgs = append(r.msgs, pb.Message {
 		MsgType: pb.MessageType_MsgAppendResponse,
 		To: m.From,
 		From: m.To,
 		Term: r.Term,
+		Index: lastIndex,
 		Reject: false,
 	})
 }
@@ -482,6 +487,8 @@ func (r *Raft) handleHeartbeat(m pb.Message) {
 	// Your Code Here (2A).
 	if r.Term <= m.Term {
 		r.becomeFollower(m.Term, m.From)
+	} else {
+		return
 	}
 }
 
