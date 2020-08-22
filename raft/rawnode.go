@@ -163,7 +163,9 @@ func (rn *RawNode) Advance(rd Ready) {
 	// Your Code Here (2A).
 	if len(rd.Entries) > 0 {
 		rn.Raft.RaftLog.stabled = rd.Entries[len(rd.Entries) - 1].Index
-		rn.Raft.RaftLog.applied = rd.Entries[len(rd.Entries) - 1].Index
+	}
+	if len(rd.CommittedEntries) > 0 {
+		rn.Raft.RaftLog.applied = rd.CommittedEntries[len(rd.CommittedEntries) - 1].Index
 	}
 }
 

@@ -81,6 +81,7 @@ func (server *Server) RawScan(_ context.Context, req *kvrpcpb.RawScanRequest) (*
 		kvs = append(kvs, &kvrpcpb.KvPair {Key: item.KeyCopy(nil), Value: val})
 		iter.Next()
 	}
+	iter.Close()
 	return &kvrpcpb.RawScanResponse {
 		Kvs: kvs,
 	}, nil

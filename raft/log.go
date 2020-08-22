@@ -97,14 +97,6 @@ func (l *RaftLog) LastIndex() uint64 {
 	return l.entries[lo].Index
 }
 
-//func (l *RaftLog) FirstIndex() uint64 {
-//	// Your Code Here (2A).
-//	if len(l.entries) == 0 {
-//		return 0
-//	}
-//	return l.entries[0].Index
-//}
-
 // Term return the term of the entry in the given index
 func (l *RaftLog) Term(i uint64) (uint64, error) {
 	// Your Code Here (2A).

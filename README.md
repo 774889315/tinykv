@@ -56,6 +56,20 @@ noop也需广播出去，之前忽略了这一点
 
 完成了Project2ac的所有测试点
 
+**8月19日 第4周周三**
+
+Project2b的实现中碰到大量报错，并修正之前的代码
+
+考虑放弃Project2b
+
+**8月22日 第4周周六**
+
+放弃Project2b，项目进度截止到Project2ac
+
+回顾Project1与Project2a，整理代码
+
+准备收工
+
 
 ---
 

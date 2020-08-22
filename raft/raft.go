@@ -169,8 +169,6 @@ func newRaft(c *Config) *Raft {
 	}
 	// Your Code Here (2A).
 	prs := make(map[uint64]*Progress, len(c.peers))
-	vt := make(map[uint64]bool)
-	rej := make(map[uint64]bool)
 	for i := 0; i < len(c.peers); i++ {
 		prs[c.peers[i]] = &Progress{}
 	}
@@ -186,8 +184,6 @@ func newRaft(c *Config) *Raft {
 		electionTimeout: c.ElectionTick,
 		heartbeatTimeout: c.HeartbeatTick,
 		Prs: prs,
-		votes: vt,
-		rejects: rej,
 	}
 	r.initTimer()
 	return r
@@ -343,7 +339,6 @@ func (r *Raft) Step(m pb.Message) error {
 		r.becomeFollower(m.Term, m.From)
 		r.Vote = None
 	}
-
 	switch m.MsgType {
 	case pb.MessageType_MsgHup:
 		if r.State == StateLeader {
